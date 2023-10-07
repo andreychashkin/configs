@@ -1,2 +1,2 @@
 # nvim_config
-Содержит config файл nvim 
+Содержит zip арзив папки nvim из .config
