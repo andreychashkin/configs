@@ -1,0 +1,14 @@
+# [[language]]
+# name = "python"
+# language-servers = [ "pyright" ]
+
+[language-server.ruff-lsp]
+command = "ruff-lsp"
+
+[[language]]
+name = "python"
+language-servers = [ "ruff-lsp", "pylsp"]
+
+# In case you'd like to use ruff alongside black for code formatting:
+formatter = { command = "black", args = ["--quiet", "-"] }
+auto-format = true

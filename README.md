@@ -1,2 +1,7 @@
-# nvim_config
-Содержит zip арзив папки nvim из .config
+# Мои конфиги:
+
+  - neovim (zip)
+  
+  - helix
+
+  - pycharm (расширение vim)
