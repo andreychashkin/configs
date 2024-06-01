@@ -6,6 +6,6 @@
 
     - pip install black 
     - pip install python-lsp-ruff
-    - pip install ruff-lsp
+    _ pip install python-lsp-server
     - brew install marksman
     - brew install vscode-langservers-extracted
