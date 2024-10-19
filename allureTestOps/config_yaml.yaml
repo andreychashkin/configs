@@ -1,0 +1,45 @@
+---
+stages:
+  - allure-start
+  - allure-stop
+
+variables:
+  ALLURE_LAUNCH_NAME:
+    value: "Патч сервера"
+    description: "Заголовок прогона - будет отображаться в ТестОпс"
+  ALLURE_LAUNCH_TAGS: "regular, ${CI_COMMIT_REF_NAME}, ${GITLAB_USER_EMAIL}"
+  ALLURE_TESTPLAN_PATH: ./testplan.json
+  ALLURE_RESULTS: ./allure-results
+  GIT_SUBMODULE_STRATEGY: recursive
+  GIT_SUBMODULE_FORCE_HTTPS: "true"
+
+allure-start:
+  stage: allure-start
+  image: st1t4/autotests_python3.10
+  before_script:
+    - git submodule init
+    - rm -R api
+    - git submodule update --recursive --remote
+    - python3 -m pip install --upgrade pip
+    - pip install -r requirements.txt
+  script:
+    - chmod +x ./allurectl
+    - ./allurectl job-run start --launch-name "${CI_PROJECT_NAME}" || true
+    - ./allurectl job-run start
+    - ./allurectl job-run plan --output-file ${ALLURE_TESTPLAN_PATH}
+    - ./allurectl watch 'pytest'
+  after_script:
+    - echo 'Tests finish'
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "push"
+
+# -------------- остановка работы allure
+allure-stop:
+  stage: allure-stop
+  image: st1t4/autotests_python3.10
+  script:
+    - chmod +x ./allurectl
+    - ./allurectl upload ./allure-results
+    - ./allurectl job-run stop --project-id ${ALLURE_PROJECT_ID} ${ALLURE_JOB_RUN_ID} || true
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "push" && ($PAGES != "True" && $PAGES != "true")
