@@ -6,9 +6,11 @@ then
 else
   apt install -y curl
   curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
-  apt install -y adb mc snapd npm neovim python3-pip python3-virtualenv
+  apt install -y adb mc snapd npm python3-pip python3-virtualenv
   apt install -y gitlab-runner openssh-server ssh
+  apt install -y zsh
   snap install android-studio --classic
+  snap install helix --classic
   apt install -y openjdk-17-jdk
   npm install -g appium
   appium driver install uiautomator2
@@ -31,7 +33,49 @@ else
   systemctl enable start_appium.service
   systemctl start start_appium.service
   systemctl enable ssh
-  git clone https://github.com/andreychashkin/configs.git
-  cp configs/nvim/nvim.zip /home/$1/.config/
-  unzip /home/$1/.config/nvim.zip /home/$1/.config/
+  mkdir /home/$1/.config/helix
+  touch /home/$1/.config/helix/config.toml /home/$1/.config/helix/config.toml
+  echo "
+theme = 'gruvbox'
+
+[editor]
+mouse = false
+
+[editor.cursor-shape]
+insert = 'bar'
+normal = 'block'
+select = 'underline'
+
+[editor.file-picker]
+hidden = false
+
+[keys.insert.j]
+k = 'normal_mode' " >> /home/$1/.config/helix/config.toml
+  echo "
+# [[language]]
+# name = 'python'
+# language-servers = [ 'pyright' ]
+
+[[language]]
+name = 'python'
+language-servers = ['pylsp', 'ruff']
+
+formatter = { command = 'black', args = ['--quiet', '-'] }
+auto-format = true
+
+[language-server.pylsp.config.pylsp.plugins]
+flake8 = {enabled = false}
+autopep8 = {enabled = false}
+mccabe = {enabled = false}
+pycodestyle = {enabled = false}
+pyflakes = {enabled = false}
+pylint = {enabled = false}
+yapf = {enabled = false}
+ruff = { enabled = true, lineLength = 120}" >> /home/$1/.config/helix/languages.toml
+  touch /home/$1/.zshrc
+  echo "
+export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin:$PATH
+alias ..='cd ..''                                                                                                                                                                                         
+alias l='ls -la'                                                                                                                                                                                         
+alias c='clear'" >> /home/$1/.zshrc
 fi
