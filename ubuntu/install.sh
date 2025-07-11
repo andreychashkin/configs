@@ -11,6 +11,7 @@ else
   apt install -y qtcreator
   apt install -y xclip
   apt install -y zsh
+  apt install -y strongswan
   snap install android-studio --classic
   snap install helix --classic
   apt install -y openjdk-17-jdk
@@ -87,7 +88,7 @@ export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:
 alias ..='cd ..'                                                                                                                                
 alias l='ls -la'                                                                                                                                
 alias c='clear'                                                                                                                                 
-#zsh
+# zsh
 export ZSH="$HOME/.oh-my-zsh"                                                                                                                   
 ZSH_THEME="arrow"                                                                                                                               
 # плагины
