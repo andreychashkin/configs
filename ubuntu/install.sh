@@ -8,11 +8,15 @@ else
   curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | sudo bash
   apt install -y adb mc snapd npm python3-pip python3-virtualenv
   apt install -y gitlab-runner openssh-server ssh
+  apt install -y qtcreator
+  apt install -y xclip
   apt install -y zsh
   snap install android-studio --classic
   snap install helix --classic
   apt install -y openjdk-17-jdk
   npm install -g appium
+  sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+  chsh -s $(which zsh)
   appium driver install uiautomator2
   touch /appium_env
   echo "
@@ -40,6 +44,7 @@ theme = 'gruvbox'
 
 [editor]
 mouse = false
+clipboard-provider = 'x-clip'
 
 [editor.cursor-shape]
 insert = 'bar'
@@ -50,7 +55,8 @@ select = 'underline'
 hidden = false
 
 [keys.insert.j]
-k = 'normal_mode' " >> /home/$1/.config/helix/config.toml
+k = 'normal_mode' 
+" >> /home/$1/.config/helix/config.toml
   echo "
 # [[language]]
 # name = 'python'
@@ -72,10 +78,20 @@ pyflakes = {enabled = false}
 pylint = {enabled = false}
 yapf = {enabled = false}
 ruff = { enabled = true, lineLength = 120}" >> /home/$1/.config/helix/languages.toml
+  rm /home/$1/.zshrc
   touch /home/$1/.zshrc
   echo "
-export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin:$PATH
-alias ..='cd ..''                                                                                                                                                                                         
-alias l='ls -la'                                                                                                                                                                                         
-alias c='clear'" >> /home/$1/.zshrc
+# меняем патч для zsh
+export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin:/snap/bin:$PATH                                           
+# сокращаем частые команды
+alias ..='cd ..'                                                                                                                                
+alias l='ls -la'                                                                                                                                
+alias c='clear'                                                                                                                                 
+#zsh
+export ZSH="$HOME/.oh-my-zsh"                                                                                                                   
+ZSH_THEME="arrow"                                                                                                                               
+# плагины
+plugins=(git)                                                                                                                                   
+# zsh
+source $ZSH/oh-my-zsh.sh" >> /home/$1/.zshrc
 fi
