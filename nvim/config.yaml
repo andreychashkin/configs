@@ -1,0 +1,19 @@
+CompileFlags:
+  Compiler: clang++
+  CompilationDatabase: "./compile_commands.json" # Ancestors
+  Add: [-xc++, -Wall]
+  Remove: [-W*]
+Index:
+  StandardLibrary: true
+  Background: Build
+Hover:
+  ShowAKA: Yes
+Diagnostics:
+  UnusedIncludes: Strict
+InlayHints:
+  Enabled: Yes
+  BlockEnd: Yes
+  Designators: Yes
+  ParameterNames: Yes
+  DeducedTypes: Yes
+  TypeNameLimit: 24
