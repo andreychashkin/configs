@@ -170,6 +170,7 @@ local map = vim.keymap.set
 -- jk: быстрый выход из всех режимов (включая терминал)
 map({ "i","v","x","s","o","c" }, "jk", "<Esc>", { desc = "Exit mode (jk)" })
 map("t", "jk", [[<C-\><C-n>]], { desc = "Exit terminal mode (jk)" })
+map("n", "jk", "<cmd>nohlsearch<cr>", { desc = "jk: снять подсветку поиска" })
 
 -- окна/буферы/поиск
 map("n", "<C-h>", "<C-w>h"); map("n", "<C-j>", "<C-w>j"); map("n", "<C-k>", "<C-w>k"); map("n", "<C-l>", "<C-w>l")
