@@ -165,6 +165,15 @@ vim.o.swapfile       = false
 vim.o.undofile       = true
 vim.lsp.set_log_level("ERROR") -- меньше мусора в lsp.log
 
+-- Отступ: 4 пробела вместо табов (как раньше)
+vim.o.expandtab   = true
+vim.o.shiftwidth  = 4
+vim.o.tabstop     = 4
+vim.o.softtabstop = 4
+vim.o.smartindent = true
+local map = vim.keymap.set
+
+
 local map = vim.keymap.set
 
 -- jk: быстрый выход из всех режимов (включая терминал)
