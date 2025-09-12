@@ -158,6 +158,7 @@ vim.g.mapleader = " "
 vim.o.termguicolors  = true
 vim.o.number         = true   -- абсолютная нумерация
 vim.o.relativenumber = false
+vim.o.wrap           = false
 vim.o.mouse          = "a"
 vim.o.clipboard      = "unnamedplus"
 vim.o.completeopt    = "menu,menuone,noselect"
@@ -357,29 +358,81 @@ require("lazy").setup({
     end
   },
 
-  -- Терминал (ToggleTerm)
-  { "akinsho/toggleterm.nvim",
-    version = "*",
-    config = function()
-      require("toggleterm").setup({
-        size = 12,
-        open_mapping = nil,
-        hide_numbers = true,
-        shade_terminals = true,
-        shading_factor = 2,
-        start_in_insert = true,
-        insert_mappings = true,
-        persist_size = true,
-        direction = "float",
-        close_on_exit = true,
-        shell = vim.o.shell,
-        float_opts = { border = "curved", winblend = 0 },
-      })
-      map("n", "<leader>tt", "<cmd>ToggleTerm direction=float<cr>",              { desc = "Terminal (float)" })
-      map("n", "<leader>th", "<cmd>ToggleTerm size=12 direction=horizontal<cr>", { desc = "Terminal (horizontal)" })
-      map("n", "<leader>tv", "<cmd>ToggleTerm size=50 direction=vertical<cr>",   { desc = "Terminal (vertical)" })
-    end
-  },
+    -- Терминал (ToggleTerm)
+    { "akinsho/toggleterm.nvim",
+      version = "*",
+      config = function()
+        require("toggleterm").setup({
+          size = 9,
+          open_mapping = nil,
+          hide_numbers = true,
+          hidden = true,
+          shade_terminals = true,
+          shading_factor = 2,
+          start_in_insert = true,
+          insert_mappings = true,
+          persist_size = true,
+          direction = "float",
+          close_on_exit = true,
+          shell = vim.o.shell,
+          float_opts = { border = "curved", winblend = 0 },
+        })
+        -- Создание нескольких терминалов с разными ID
+        local Terminal = require("toggleterm.terminal").Terminal
+
+        -- Терминал 1 - (float)
+        local term1 = Terminal:new({
+          cmd = "zsh",
+          dir = ".",
+          hidden = true,
+          direction = "float",
+          on_open = function(term)
+            vim.cmd("startinsert!")
+          end,
+        })
+
+        -- Терминал 2 - (horizontal)
+        local term2 = Terminal:new({
+          cmd = "zsh",
+          dir = ".",
+          hidden = true,
+          direction = "horizontal",
+          size = 15,
+          on_open = function(term)
+            vim.cmd("startinsert!")
+          end,
+        })
+
+        -- Терминал 3 - (vertical)
+        local term3 = Terminal:new({
+          cmd = "zsh",
+          dir = ".",
+          hidden = true,
+          direction = "vertical",
+          size = 60,
+          on_open = function(term)
+            vim.cmd("startinsert!")
+          end,
+        })
+
+        -- Терминал 4 - (float)
+        local term4 = Terminal:new({
+          cmd = "zsh",
+          dir = ".",
+          hidden = true,
+          direction = "float",
+          on_open = function(term)
+            vim.cmd("startinsert!")
+          end,
+        })
+
+        -- Маппинги для переключения конкретных терминалов
+        map("n", "<leader>tt", function() term1:toggle() end, { desc = "Toggle Terminal 1 (make)" })
+        map("n", "<leader>th", function() term2:toggle() end, { desc = "Toggle Terminal 2 (ssh)" })
+        map("n", "<leader>tv", function() term3:toggle() end, { desc = "Toggle Terminal 3 (other)" })
+        map("n", "<leader>tl", function() term4:toggle() end, { desc = "Toggle Terminal 4 (last)" })
+      end
+    },
 
   -- LSPCONFIG
   { "neovim/nvim-lspconfig", lazy = false },
