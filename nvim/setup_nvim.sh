@@ -298,7 +298,15 @@ require("lazy").setup({
         disable_netrw = true,
         hijack_netrw = true,
         hijack_directories = { enable = false },
-        view = { width = 32 },
+        view = { 
+            width = {
+                min = 25,    -- Минимальная ширина
+                max = 50,    -- Максимальная ширина
+                padding = 5, -- Отступ от края
+            },
+            adaptive_size = true,
+            preserve_window_proportions = true,
+        },
         renderer = { group_empty = true },
         update_focused_file = { enable = true },
       })
