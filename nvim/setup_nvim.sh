@@ -498,9 +498,18 @@ require("lazy").setup({
     dependencies = { "nvim-tree/nvim-web-devicons" },
     config = function()
       require("bufferline").setup({ options = { diagnostics = "none", separator_style = "slant" } })
-      map("n", "<leader>1", "<cmd>BufferLineGoToBuffer 1<cr>")
-      map("n", "<leader>2", "<cmd>BufferLineGoToBuffer 2<cr>")
-      map("n", "<leader>$", "<cmd>BufferLineGoToBuffer -1<cr>")
+    -- Листание буферов
+    map("n", "<S-Tab>", "<cmd>BufferLineCyclePrev<cr>")     -- Предыдущий буфер
+    map("n", "<Tab>", "<cmd>BufferLineCycleNext<cr>")       -- Следующий буфер
+
+    map("n", "<S-h>", "<cmd>BufferLineCyclePrev<cr>")    -- Shift + Left: Предыдущий буфер
+    map("n", "<S-l>", "<cmd>BufferLineCycleNext<cr>")   -- Shift + Right: Следующий буфер
+    
+    -- Закрытие буферов
+    map("n", "<leader>bb", "<cmd>bd<cr>")                   -- Закрыть текущий буфер
+    map("n", "<leader>bl", "<cmd>BufferLineCloseLeft<cr>")  -- Закрыть все слева
+    map("n", "<leader>br", "<cmd>BufferLineCloseRight<cr>") -- Закрыть все справа
+    map("n", "<leader>ba", "<cmd>BufferLineCloseOthers<cr>") -- Закрыть все кроме текущего
     end
   },
 }, { checker = { enabled = false } })
