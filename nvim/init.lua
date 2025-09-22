@@ -147,7 +147,7 @@ require("lazy").setup({
     end
   },
 
-  -- Файловый менеджер (не автооткрывается при `nvim .`)
+  -- Файловый менеджер
   { "nvim-tree/nvim-tree.lua",
     dependencies = { "nvim-tree/nvim-web-devicons" },
     cmd = { "NvimTreeToggle", "NvimTreeFocus" },
@@ -157,7 +157,7 @@ require("lazy").setup({
         hijack_netrw = true,
         hijack_directories = { enable = false },
         view = {
-          width = 35,                 -- корректный формат width
+          width = 35,
           adaptive_size = true,
           preserve_window_proportions = true,
         },
@@ -278,9 +278,6 @@ require("lazy").setup({
     end
   },
 
-  -- LSPCONFIG
-  { "neovim/nvim-lspconfig", lazy = false },
-
   -- Автодополнение
   { "hrsh7th/cmp-nvim-lsp", lazy = false },
   { "hrsh7th/nvim-cmp",
@@ -346,10 +343,8 @@ require("lazy").setup({
   },
 }, { checker = { enabled = false } })
 
--- ---------- LSP ----------
-local lspconfig = require("lspconfig")
-local util = require("lspconfig.util")
-
+-- ---------- LSP (совместимость: NVIM < 0.11 и >= 0.11) ----------
+local map = vim.keymap.set
 local function on_attach(_, bufnr)
   local o = { buffer = bufnr }
   map("n", "gd", vim.lsp.buf.definition, o)
@@ -359,172 +354,165 @@ local function on_attach(_, bufnr)
   map("n", "K",  vim.lsp.buf.hover, o)
   map("n", "<leader>rn", vim.lsp.buf.rename, o)
   map("n", "<leader>ca", vim.lsp.buf.code_action, o)
+  map("n", "[d", vim.diagnostic.goto_prev, o)
+  map("n", "]d", vim.diagnostic.goto_next, o)
 end
 
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 pcall(function() capabilities = require("cmp_nvim_lsp").default_capabilities(capabilities) end)
 
--- ===== утилиты для clangd =====
-local function split_words(s) local t = {}; for w in s:gmatch("%S+") do t[#t+1]=w end; return t end
-local function is_wrapper(bin)
-  bin = vim.fn.fnamemodify(bin, ":t")
-  return (bin=="ccache" or bin=="sccache" or bin=="distcc" or bin=="icecc")
-end
+local has_new = vim.fn.has("nvim-0.11") == 1 and type(vim.lsp.config) == "table" and type(vim.lsp.enable) == "function"
 
-local function detect_drivers_from_ccdb(ccpath)
-  local ok, data = pcall(function()
-    local bytes = assert(vim.fn.readfile(ccpath, "b"))
-    return vim.json.decode(table.concat(bytes, "\n"))
-  end)
-  if not ok or type(data) ~= "table" then return {}, nil end
-  local set, drivers, build_dir = {}, {}, nil
-  for i, obj in ipairs(data) do
-    if i == 1 and type(obj.directory) == "string" then build_dir = obj.directory end
-    if i > 200 then break end
-    local drv
-    if type(obj.arguments) == "table" and #obj.arguments > 0 then
-      local a0 = obj.arguments[1]
-      drv = (a0 and not is_wrapper(a0)) and a0 or obj.arguments[2]
-    elseif type(obj.command) == "string" then
-      local p = split_words(obj.command)
-      drv = (#p > 1 and is_wrapper(p[1])) and p[2] or p[1]
-    end
-    if drv and vim.fn.executable(drv) == 1 and not set[drv] then
-      set[drv]=true; drivers[#drivers+1]=drv
-    end
-  end
-  return drivers, build_dir
-end
-
--- ===== clangd =====
--- Автоформатирование при сохранении: через автокоманду для текущего буфера
-local clangd_fmt_group = vim.api.nvim_create_augroup("ClangdFormatOnSave", { clear = true })
-
-lspconfig.clangd.setup({
+-- Общие настройки серверов (без on_new_config)
+local clangd_common = {
   cmd = {
+    -- поменяй на "/usr/bin/clangd-17", если поставил 17-ю
     "clangd",
     "--enable-config",
     "--header-insertion=never",
     "--completion-style=detailed",
     "--function-arg-placeholders=0",
+    "--query-driver=/usr/bin/g++,/usr/bin/clang++",
   },
+  filetypes = { "c","cpp","objc","objcpp","cuda" },
+  single_file_support = true,
+  handlers = { ["textDocument/semanticTokens/full"] = function() return nil end },
   on_attach = function(client, bufnr)
-    -- вызов твоего базового on_attach (если определён выше)
-    pcall(on_attach, client, bufnr)
-
+    on_attach(client, bufnr)
     if client.server_capabilities.documentFormattingProvider then
-      vim.api.nvim_clear_autocmds({ group = clangd_fmt_group, buffer = bufnr })
+      local grp = vim.api.nvim_create_augroup("ClangdFormatOnSave", { clear = true })
       vim.api.nvim_create_autocmd("BufWritePre", {
-        group = clangd_fmt_group,
-        buffer = bufnr,
+        group = grp, buffer = bufnr, desc = "Format C/C++ with clangd on save",
         callback = function()
-          -- форматируем ИМЕННО clangd (если вдруг есть другие форматтеры)
           vim.lsp.buf.format({
-            async = false,
-            timeout_ms = 5000,
+            async = false, timeout_ms = 5000,
             filter = function(c) return c.name == "clangd" end,
           })
-        end,
-        desc = "Format C/C++ with clangd on save",
+        end
       })
     end
   end,
   capabilities = capabilities,
-  filetypes = { "c","cpp","objc","objcpp","cuda" },
-  handlers = {
-    ["textDocument/semanticTokens/full"] = function() return nil end,
-  },
-  root_dir = function(fname)
-    local cc = find_ccdb_up(dirname(fname))
-    if cc then
-      local dir = dirname(cc)
-      local real = (uv.fs_realpath and uv.fs_realpath(dir)) or dir
-      return real
-    end
-    return util.find_git_ancestor(fname) or (uv.cwd and uv.cwd()) or vim.loop.cwd()
-  end,
-  on_new_config = function(new_config, root_dir)
-    local cc = joinpath(root_dir, "compile_commands.json")
-    if vim.fn.filereadable(cc) == 1 then
-      if not vim.tbl_contains(new_config.cmd, "--compile-commands-dir=" .. root_dir) then
-        table.insert(new_config.cmd, "--compile-commands-dir=" .. root_dir)
-      end
-      local drv = detect_drivers_from_ccdb(cc)
-      local query_driver_added = false
-      if #drv > 0 then
-        for _, driver in ipairs(drv) do
-          if vim.fn.executable(driver) == 1 then
-            table.insert(new_config.cmd, "--query-driver=" .. driver)
-            query_driver_added = true
-            break
-          end
-        end
-      end
-      if not query_driver_added then
-        for _, d in ipairs({ "/usr/bin/g++", "/usr/bin/clang++" }) do
-          if vim.fn.executable(d) == 1 then
-            table.insert(new_config.cmd, "--query-driver=" .. d)
-            break
-          end
-        end
-      end
-    else
-      vim.schedule(function()
-        vim.notify("clangd: compile_commands.json не найден в " .. root_dir ..
-          " — сгенерируй через bear/compiledb", vim.log.levels.WARN)
-      end)
-    end
-  end,
-  single_file_support = true,
-})
+}
 
--- ===== pylsp =====
-lspconfig.pylsp.setup({
-  on_attach = on_attach,
-  capabilities = capabilities,
-  root_dir = util.root_pattern("pyproject.toml", "setup.cfg", "setup.py", "requirements.txt", ".git"),
+local pylsp_common = {
+  cmd = { "pylsp" },
+  filetypes = { "python" },
+  single_file_support = true,
   settings = {
     pylsp = {
       plugins = {
+        ruff  = { enabled = true, lineLength = 120 },
         black = { enabled = true },
-        ruff  = { enabled = true },
         pycodestyle = { enabled = false },
         pyflakes    = { enabled = false },
         mccabe      = { enabled = false },
-        jedi        = {},
+        pylint      = { enabled = false },
+        yapf        = { enabled = false },
+        autopep8    = { enabled = false },
       },
     },
   },
-  on_new_config = function(new_config, root_dir)
-    local sep = package.config:sub(1,1)
-    local is_win = sep == "\\"
-    local function jp(...) return table.concat({ ... }, sep) end
-    local venv
-    for _, name in ipairs({ ".venv", "venv" }) do
-      local base = jp(root_dir, name)
-      if vim.fn.isdirectory(base) == 1 then venv = base; break end
+  on_attach = on_attach,
+  capabilities = capabilities,
+}
+
+if has_new then
+  -- === Neovim 0.11+: новый API ===
+  vim.lsp.config.clangd = clangd_common
+  vim.lsp.config.pylsp  = pylsp_common
+  vim.lsp.enable({ "clangd", "pylsp" })
+else
+  -- === Neovim 0.8–0.10: старый lspconfig ===
+  local lspconfig = require("lspconfig")
+  local util = require("lspconfig.util")
+
+  -- Твой root_dir + on_new_config из старого конфига (оставляем как было)
+  local uv = vim.uv or vim.loop
+  local function joinpath(...) local sep = package.config:sub(1,1); return table.concat({...}, sep) end
+  local function dirname(p) return vim.fn.fnamemodify(p, ":h") end
+  local function find_ccdb_up(start_dir)
+    local dir = start_dir
+    while dir and dir ~= "" do
+      local candidate = joinpath(dir, "compile_commands.json")
+      if vim.fn.filereadable(candidate) == 1 then return candidate end
+      local parent = vim.fn.fnamemodify(dir, ":h")
+      if parent == dir then break end
+      dir = parent
     end
-    if venv then
-      local bin = is_win and "Scripts" or "bin"
-      local py    = jp(venv, bin, is_win and "python.exe" or "python")
-      local pylsp = jp(venv, bin, is_win and "pylsp.exe" or "pylsp")
-      new_config.cmd     = (vim.fn.executable(pylsp) == 1) and { pylsp } or { "pylsp" }
-      new_config.cmd_env = {
-        VIRTUAL_ENV = venv,
-        PATH = jp(venv, bin) .. (is_win and ";" or ":") .. (vim.env.PATH or ""),
-      }
-      new_config.settings = new_config.settings or {}; new_config.settings.pylsp = new_config.settings.pylsp or {}
-      new_config.settings.pylsp.plugins = new_config.settings.pylsp.plugins or {}
-      new_config.settings.pylsp.plugins.jedi = new_config.settings.pylsp.plugins.jedi or {}
-      new_config.settings.pylsp.plugins.jedi.environment = py
+  end
+  local function split_words(s) local t = {}; for w in s:gmatch("%S+") do t[#t+1]=w end; return t end
+  local function is_wrapper(bin) bin = vim.fn.fnamemodify(bin, ":t"); return (bin=="ccache" or bin=="sccache" or bin=="distcc" or bin=="icecc") end
+  local function detect_drivers_from_ccdb(ccpath)
+    local ok, data = pcall(function()
+      local bytes = assert(vim.fn.readfile(ccpath, "b"))
+      return vim.json.decode(table.concat(bytes, "\n"))
+    end)
+    if not ok or type(data) ~= "table" then return {}, nil end
+    local set, drivers = {}, {}
+    for i, obj in ipairs(data) do
+      if i > 200 then break end
+      local drv
+      if type(obj.arguments) == "table" and #obj.arguments > 0 then
+        local a0 = obj.arguments[1]; drv = (a0 and not is_wrapper(a0)) and a0 or obj.arguments[2]
+      elseif type(obj.command) == "string" then
+        local p = split_words(obj.command); drv = (#p > 1 and is_wrapper(p[1])) and p[2] or p[1]
+      end
+      if drv and vim.fn.executable(drv) == 1 and not set[drv] then set[drv]=true; drivers[#drivers+1]=drv end
     end
-  end,
-})
+    return drivers
+  end
+
+  lspconfig.clangd.setup(vim.tbl_extend("force", clangd_common, {
+    root_dir = function(fname)
+      local cc = find_ccdb_up(dirname(fname))
+      if cc then
+        local dir = dirname(cc)
+        local real = (uv.fs_realpath and uv.fs_realpath(dir)) or dir
+        return real
+      end
+      return util.find_git_ancestor(fname) or (uv.cwd and uv.cwd()) or vim.loop.cwd()
+    end,
+    on_new_config = function(new_config, root_dir)
+      local cc = joinpath(root_dir, "compile_commands.json")
+      if vim.fn.filereadable(cc) == 1 then
+        if not vim.tbl_contains(new_config.cmd, "--compile-commands-dir=" .. root_dir) then
+          table.insert(new_config.cmd, "--compile-commands-dir=" .. root_dir)
+        end
+        local drv = detect_drivers_from_ccdb(cc)
+        local added = false
+        if #drv > 0 then
+          for _, d in ipairs(drv) do
+            if vim.fn.executable(d) == 1 then
+              table.insert(new_config.cmd, "--query-driver=" .. d)
+              added = true
+              break
+            end
+          end
+        end
+        if not added then
+          for _, d in ipairs({ "/usr/bin/g++", "/usr/bin/clang++" }) do
+            if vim.fn.executable(d) == 1 then
+              table.insert(new_config.cmd, "--query-driver=" .. d)
+              break
+            end
+          end
+        end
+      else
+        vim.schedule(function()
+          vim.notify("clangd: compile_commands.json не найден в " .. root_dir .. " — сгенерируй через CMake/bear", vim.log.levels.WARN)
+        end)
+      end
+    end,
+  }))
+
+  lspconfig.pylsp.setup(pylsp_common)
+end
 
 vim.diagnostic.config({
   underline = true,
-  virtual_text = true,
+  virtual_text = { spacing = 2, prefix = "●" },
   signs = true,
   update_in_insert = false,
   severity_sort = true,
-})
+}
